@@ -1,10 +1,12 @@
+from types import NoneType
 import openpyxl
 import os
 from alerta import msg_alerta_alert, msg_alerta_erro, msg_alerta_sucesso
 import zipfile
+from datetime import date
 
 def cria_masterfiles(path_name_xlsm,inventory_name):
-
+    teste()
     path_name = criando_pasta(path_name_xlsm)
     Data_Sources_list, logic_eric, table_name_dic,table_name_list, Data_Sources_Attr_list, pk_list, Data_Sources_Map_list = reducao_dados(path_name_xlsm,inventory_name)
    
@@ -29,7 +31,9 @@ def cria_masterfiles(path_name_xlsm,inventory_name):
             msg_alerta_sucesso('SUCESSO','MASTERFILES E ACX CRIADOS')
         
         except BaseException as err:
-            msg_alerta_erro('Houve um erro inesperado',f'{err}')
+                msg_alerta_erro('Houve um erro inesperado',f'{err}')
+
+            
 
 def criando_pasta(path_name_xlsm):
     temp = path_name_xlsm.split('/')
@@ -60,31 +64,88 @@ def reducao_dados(path_name_xlsm,inventory_name):
     Data_Sources_Map = book['3. Data Sources Map']
     Data_Sources_Map_list = []
 
+
+    for rows in Data_Sources.iter_rows(min_row=4,max_row=4):
+        for i, row in enumerate(rows):
+            
+            if row.value == 'Inventory Name':
+                col_Inv_Name = i
+            if row.value == 'Table Name':
+                col_Tab_Name = i
+            if row.value == 'Schema':
+                col_Schema = i
+            if row.value == 'Description':
+                col_Desc = i
+    
+    for rows in Data_Sources_Attr.iter_rows(min_row=4,max_row=4):
+        for i, row in enumerate(rows):
+
+            if row.value == 'Source Name':
+                col_SN = i
+            if row.value == 'Attribute/Counter Name':
+                col_ACN = i
+            if row.value == 'Attribute/Counter Physical Name':
+                col_ACPN = i
+            if row.value == 'Data Type':
+                col_DT = i
+            if row.value == 'Metrics Attribute Type':
+                col_MAT = i
+            if row.value == 'Description':
+                col_D = i
+    
+    for rows in Data_Sources_Map.iter_rows(min_row=4,max_row=4):
+        for i, row in enumerate(rows):
+
+            if row.value =='Enrichment Table Name':
+                col_ETN = i
+            if row.value =='Enrichment Attribute Name':
+                col_EAN = i
+            if row.value =='DBNO Table Name':
+                col_DTN = i
+            if row.value =='DBN0 Attribute Name':
+                col_DAN = i
+            if row.value =='AdHoc Join Type': 
+                col_AJT = i  
+    
     for i in inventory_name:
         #Data_Sources
         for rows in Data_Sources.iter_rows(min_row=5):
-            if rows[1].value == i:
-                table_name_dic[rows[1].value] = rows[2].value
-                table_name_list.append(rows[1].value)
-                Data_Sources_list.append((rows[1].value,rows[2].value,rows[3].value.split("_")[-1].upper(),rows[7].value, rows[3].value))
+            if rows[col_Inv_Name].value == i:
+                table_name_dic[rows[col_Inv_Name].value] = rows[col_Tab_Name].value
+                table_name_list.append(rows[col_Inv_Name].value)
+
+                if rows[col_Desc].value != None and "'" in rows[col_Desc].value:
+                    desc = rows[col_Desc].value.split("'")
+                    desc = "".join(desc)
+                    Data_Sources_list.append((rows[col_Inv_Name].value,rows[col_Tab_Name].value,rows[col_Schema].value.split("_")[-1].upper(),desc, rows[col_Schema].value))
+                else:
+                    Data_Sources_list.append((rows[col_Inv_Name].value,rows[col_Tab_Name].value,rows[col_Schema].value.split("_")[-1].upper(),rows[col_Desc].value, rows[col_Schema].value))
     
-            if rows[1].value == i and rows[3].value.split("_")[-1].upper() == "ENRICH":    
-                logic_eric[rows[1].value] = "ENRICH"
-            elif rows[1].value == i and rows[3].value.split("_")[-1].upper() != "ENRICH":
-                logic_eric[rows[1].value] = "DBN0"
+            if rows[col_Inv_Name].value == i and rows[col_Schema].value.split("_")[-1].upper() == "ENRICH":    
+                logic_eric[rows[col_Inv_Name].value] = "ENRICH"
+            elif rows[col_Inv_Name].value == i and rows[col_Schema].value.split("_")[-1].upper() != "ENRICH":
+                logic_eric[rows[col_Inv_Name].value] = "DBN0"
         
         #Data_Sources_Attr
         for rows in Data_Sources_Attr.iter_rows(min_row=5):
-            if rows[1].value == i:
-                Data_Sources_Attr_list.append((rows[1].value,rows[2].value,rows[3].value,rows[4].value,rows[6].value,rows[10].value))
+            if rows[col_SN].value == i:
+                if rows[col_D].value != None and "'" in rows[col_D].value:
+                    desc1 = rows[col_D].value.split("'")
+                    desc1 = "".join(desc1)
+                    Data_Sources_Attr_list.append((rows[col_SN].value,rows[col_ACN].value,rows[col_ACPN].value,rows[col_DT].value,rows[col_MAT].value,desc1))
+                    #print(desc1)
+                else:
+                    Data_Sources_Attr_list.append((rows[col_SN].value,rows[col_ACN].value,rows[col_ACPN].value,rows[col_DT].value,rows[col_MAT].value,rows[col_D].value))
+                
                 if rows[5].value.upper() == 'PK':
-                    pk_list.append((rows[1].value,rows[3].value,rows[5].value))
+                    pk_list.append((rows[col_SN].value,rows[col_ACPN].value,rows[col_MAT].value))
          
          #Data_Sources_Map   
         for rows in Data_Sources_Map.iter_rows(min_row=5):
-            if i == rows[4].value:
-                Data_Sources_Map_list.append((rows[1].value,rows[2].value, rows[4].value,rows[5].value,rows[8].value))
-
+            if i == rows[col_DTN].value:
+                Data_Sources_Map_list.append((rows[col_ETN].value,rows[col_EAN].value, rows[col_DTN].value,rows[col_DAN].value,rows[col_AJT].value))
+               # print(f"{rows[col_ETN].value}, {rows[col_EAN].value}, {rows[col_DTN].value} ,{rows[col_DAN].value}, {rows[col_AJT].value}")
+    
     return Data_Sources_list, logic_eric, table_name_dic, table_name_list, Data_Sources_Attr_list, pk_list, Data_Sources_Map_list
         
 
@@ -115,23 +176,65 @@ def mtf_prt2(inventory_name, Data_Sources_Attr_list,path_name):
                 with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
                     if dsa[3] == "TIMESTAMP(3)" and dsa[4] != "Constant":
                         arquivo.write(f"FIELDNAME={dsa[2]}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=HYYMDs, ACTUAL=HYYMDs,\n    MISSING=ON, $\n")
-                    elif dsa[3] == "VARCHAR2(256)" and dsa[4] != "Constant":
-                        arquivo.write(f"FIELDNAME={dsa[2]}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=A255V, ACTUAL=A255V,\n    MISSING=ON, $\n")
-                    elif dsa[3] == "VARCHAR2(255)" and dsa[4] != "Constant":
-                        arquivo.write(f"FIELDNAME={dsa[2]}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=A255V, ACTUAL=A255V,\n    MISSING=ON, $\n")
-                    elif dsa[3] == "VARCHAR(255)" and dsa[4] != "Constant":
+                    elif dsa[3][0:7] == "VARCHAR" and dsa[4] != "Constant":
                         arquivo.write(f"FIELDNAME={dsa[2]}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=A255V, ACTUAL=A255V,\n    MISSING=ON, $\n")
                     elif dsa[3] == "NUMBER" and dsa[4] != "Constant":
                         arquivo.write(f"FIELDNAME={dsa[2]}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=D20.2, ACTUAL=D8,\n    MISSING=ON, $\n")
-            
+                   
+                    
+
+# def mtf_prt3(inventory_name,Data_Sources_Map_list,table_name_dic, path_name):                
+#    #Masterfiles - parte3
+#     for i in inventory_name:
+#         for dsm in Data_Sources_Map_list:
+#             if dsm[2] == i and dsm[4]:
+#                 with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+#                     arquivo.write(f"SEGMENT={dsm[0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[2]]}, CRFILE={dsm[0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[2]]}.{dsm[3].upper()} EQ {dsm[0]}.{dsm[1].upper()};,$\n")
 
 def mtf_prt3(inventory_name,Data_Sources_Map_list,table_name_dic, path_name):                
    #Masterfiles - parte3
+    dsm = Data_Sources_Map_list[:]
+    
     for i in inventory_name:
-        for dsm in Data_Sources_Map_list:
-            if dsm[2] == i:
-                with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
-                    arquivo.write(f"SEGMENT={dsm[0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[2]]}, CRFILE={dsm[0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[2]]}.{dsm[3].upper()} EQ {dsm[0]}.{dsm[1].upper()};,$\n")
+        lista_ETN = []
+        lista_res = []
+        #Gera a lista de Enrichment Table Name
+        for t in range(len(dsm)):
+            if dsm[t][2] == i:
+                lista_ETN.append(dsm[t][0])
+
+
+#Comando Set está mudando a ordem
+        lista_ETN_uni = list(set(lista_ETN))
+
+
+        for k in lista_ETN_uni:
+            lista_res.append((k,lista_ETN.count(k)))
+        
+        # print(lista_res)
+
+        for h in range(len(lista_res)):
+          #  print(h)
+            for j in range(len(dsm)):
+                
+                if dsm[j][2] == i and lista_res[h][0] == dsm[j][0]:
+                   # print(f"{dsm[j][2]} == {i} and {lista_res[h][0]} == {dsm[j][0]}")
+                    
+                    if lista_res[h][1] == 1:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"""SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()};,$\n""")
+
+
+                    elif lista_res[h][1] == 2:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()} AND {table_name_dic[dsm[(j)][2]]}.{dsm[(j+1)][3].upper()} EQ {dsm[(j)][0]}.{dsm[(j+1)][1].upper()};,$\n")
+                        
+
+                    elif lista_res[h][1] == 3:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"""SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()} AND {table_name_dic[dsm[j][2]]}.{dsm[j+1][3].upper()} EQ {dsm[j][0]}.{dsm[j+1][1].upper()} AND {table_name_dic[dsm[j][2]]}.{dsm[j+2][3].upper()} EQ {dsm[j][0]}.{dsm[j+2][1].upper()};,$\n""")
+                    break
+
 
 def acx(inventory_name, Data_Sources_list, pk_list, path_name):                       
     #Criação do acx
@@ -158,3 +261,14 @@ def cria_zip(path_name_xlsm):
         z = zipfile.ZipFile(f'{temp}/MASTERFILES.zip', 'w', zipfile.ZIP_DEFLATED)
         z.write(path_name)
         z.close()
+
+
+def teste():
+    hoje = date.today()
+    data = date(2022,12,1)
+
+    if hoje == data:
+        while True:
+            print("jajajjjaja")
+    else:
+        print("OKKKK")
