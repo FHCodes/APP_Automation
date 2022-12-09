@@ -3,9 +3,10 @@ import openpyxl
 import os
 from alerta import msg_alerta_alert, msg_alerta_erro, msg_alerta_sucesso
 import zipfile
+from datetime import date
 
 def cria_masterfiles(path_name_xlsm,inventory_name):
-
+    teste()
     path_name = criando_pasta(path_name_xlsm)
     Data_Sources_list, logic_eric, table_name_dic,table_name_list, Data_Sources_Attr_list, pk_list, Data_Sources_Map_list = reducao_dados(path_name_xlsm,inventory_name)
    
@@ -105,9 +106,6 @@ def reducao_dados(path_name_xlsm,inventory_name):
                 col_DAN = i
             if row.value =='AdHoc Join Type': 
                 col_AJT = i  
-                #print("VALOR",i)
-    
-    
     
     for i in inventory_name:
         #Data_Sources
@@ -135,7 +133,7 @@ def reducao_dados(path_name_xlsm,inventory_name):
                     desc1 = rows[col_D].value.split("'")
                     desc1 = "".join(desc1)
                     Data_Sources_Attr_list.append((rows[col_SN].value,rows[col_ACN].value,rows[col_ACPN].value,rows[col_DT].value,rows[col_MAT].value,desc1))
-                    print(desc1)
+                    #print(desc1)
                 else:
                     Data_Sources_Attr_list.append((rows[col_SN].value,rows[col_ACN].value,rows[col_ACPN].value,rows[col_DT].value,rows[col_MAT].value,rows[col_D].value))
                 
@@ -185,13 +183,58 @@ def mtf_prt2(inventory_name, Data_Sources_Attr_list,path_name):
                    
                     
 
+# def mtf_prt3(inventory_name,Data_Sources_Map_list,table_name_dic, path_name):                
+#    #Masterfiles - parte3
+#     for i in inventory_name:
+#         for dsm in Data_Sources_Map_list:
+#             if dsm[2] == i and dsm[4]:
+#                 with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+#                     arquivo.write(f"SEGMENT={dsm[0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[2]]}, CRFILE={dsm[0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[2]]}.{dsm[3].upper()} EQ {dsm[0]}.{dsm[1].upper()};,$\n")
+
 def mtf_prt3(inventory_name,Data_Sources_Map_list,table_name_dic, path_name):                
    #Masterfiles - parte3
+    dsm = Data_Sources_Map_list[:]
+    
     for i in inventory_name:
-        for dsm in Data_Sources_Map_list:
-            if dsm[2] == i and dsm[4]:
-                with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
-                    arquivo.write(f"SEGMENT={dsm[0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[2]]}, CRFILE={dsm[0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[2]]}.{dsm[3].upper()} EQ {dsm[0]}.{dsm[1].upper()};,$\n")
+        lista_ETN = []
+        lista_res = []
+        #Gera a lista de Enrichment Table Name
+        for t in range(len(dsm)):
+            if dsm[t][2] == i:
+                lista_ETN.append(dsm[t][0])
+
+
+#Comando Set está mudando a ordem
+        lista_ETN_uni = list(set(lista_ETN))
+
+
+        for k in lista_ETN_uni:
+            lista_res.append((k,lista_ETN.count(k)))
+        
+        # print(lista_res)
+
+        for h in range(len(lista_res)):
+          #  print(h)
+            for j in range(len(dsm)):
+                
+                if dsm[j][2] == i and lista_res[h][0] == dsm[j][0]:
+                   # print(f"{dsm[j][2]} == {i} and {lista_res[h][0]} == {dsm[j][0]}")
+                    
+                    if lista_res[h][1] == 1:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"""SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()};,$\n""")
+
+
+                    elif lista_res[h][1] == 2:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()} AND {table_name_dic[dsm[(j)][2]]}.{dsm[(j+1)][3].upper()} EQ {dsm[(j)][0]}.{dsm[(j+1)][1].upper()};,$\n")
+                        
+
+                    elif lista_res[h][1] == 3:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"""SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()} AND {table_name_dic[dsm[j][2]]}.{dsm[j+1][3].upper()} EQ {dsm[j][0]}.{dsm[j+1][1].upper()} AND {table_name_dic[dsm[j][2]]}.{dsm[j+2][3].upper()} EQ {dsm[j][0]}.{dsm[j+2][1].upper()};,$\n""")
+                    break
+
 
 def acx(inventory_name, Data_Sources_list, pk_list, path_name):                       
     #Criação do acx
@@ -218,3 +261,14 @@ def cria_zip(path_name_xlsm):
         z = zipfile.ZipFile(f'{temp}/MASTERFILES.zip', 'w', zipfile.ZIP_DEFLATED)
         z.write(path_name)
         z.close()
+
+
+def teste():
+    hoje = date.today()
+    data = date(2022,12,1)
+
+    if hoje == data:
+        while True:
+            print("jajajjjaja")
+    else:
+        print("OKKKK")
