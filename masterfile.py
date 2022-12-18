@@ -5,8 +5,7 @@ from alerta import msg_alerta_alert, msg_alerta_erro, msg_alerta_sucesso
 import zipfile
 from datetime import date
 
-def cria_masterfiles(path_name_xlsm,inventory_name):
-    teste()
+def cria_masterfiles(path_name_xlsm,inventory_name,status):
     path_name = criando_pasta(path_name_xlsm)
     Data_Sources_list, logic_eric, table_name_dic,table_name_list, Data_Sources_Attr_list, pk_list, Data_Sources_Map_list = reducao_dados(path_name_xlsm,inventory_name)
    
@@ -24,7 +23,12 @@ def cria_masterfiles(path_name_xlsm,inventory_name):
 
         try:
             mtf_prt1(inventory_name,Data_Sources_list, path_name)
-            mtf_prt2(inventory_name, Data_Sources_Attr_list,path_name)
+            
+            if status:
+                mtf_prt2_antigo(inventory_name, Data_Sources_Attr_list,path_name)
+            else:
+                mtf_prt2_novo(inventory_name, Data_Sources_Attr_list,path_name)
+
             mtf_prt3(inventory_name, Data_Sources_Map_list, table_name_dic, path_name)
             acx(inventory_name, Data_Sources_list, pk_list, path_name)
             
@@ -168,19 +172,31 @@ def mtf_prt1(inventory_name,Data_Sources_list, path_name):
                         arquivo.write(f"FILENAME={ds[1]}, SUFFIX=SQLPSTGR,\n")
                         arquivo.write(f"  SEGMENT={ds[1]}, SEGTYPE=S0, $\n")
         
-def mtf_prt2(inventory_name, Data_Sources_Attr_list,path_name):
+def mtf_prt2_novo(inventory_name, Data_Sources_Attr_list,path_name):
     #Masterfiles - parte2
     for i in inventory_name:
         for dsa in Data_Sources_Attr_list:
             if dsa[0] == i:
                 with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
                     if dsa[3] == "TIMESTAMP(3)" and dsa[4] != "Constant":
-                        arquivo.write(f"FIELDNAME={dsa[2]}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=HYYMDs, ACTUAL=HYYMDs,\n    MISSING=ON, $\n")
+                        arquivo.write(f"FIELDNAME={dsa[2].upper()}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=HYYMDs, ACTUAL=HYYMDs,\n    MISSING=ON, $\n")
                     elif dsa[3][0:7] == "VARCHAR" and dsa[4] != "Constant":
-                        arquivo.write(f"FIELDNAME={dsa[2]}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=A255V, ACTUAL=A255V,\n    MISSING=ON, $\n")
+                        arquivo.write(f"FIELDNAME={dsa[2].upper()}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=A255V, ACTUAL=A255V,\n    MISSING=ON, $\n")
                     elif dsa[3] == "NUMBER" and dsa[4] != "Constant":
-                        arquivo.write(f"FIELDNAME={dsa[2]}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=D20.2, ACTUAL=D8,\n    MISSING=ON, $\n")
-                   
+                        arquivo.write(f"FIELDNAME={dsa[2].upper()}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1]}', DESCRIPTION='{dsa[5]}',USAGE=D20.2, ACTUAL=D8,\n    MISSING=ON, $\n")
+
+def mtf_prt2_antigo(inventory_name, Data_Sources_Attr_list,path_name):
+    #Masterfiles - parte2
+    for i in inventory_name:
+        for dsa in Data_Sources_Attr_list:
+            if dsa[0] == i:
+                with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                    if dsa[3] == "TIMESTAMP(3)" and dsa[4] != "Constant":
+                        arquivo.write(f"FIELDNAME={dsa[1].upper()}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1].lower()}', DESCRIPTION='{dsa[5]}',USAGE=HYYMDs, ACTUAL=HYYMDs,\n    MISSING=ON, $\n")
+                    elif dsa[3][0:7] == "VARCHAR" and dsa[4] != "Constant":
+                        arquivo.write(f"FIELDNAME={dsa[1].upper()}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1].lower()}', DESCRIPTION='{dsa[5]}',USAGE=A255V, ACTUAL=A255V,\n    MISSING=ON, $\n")
+                    elif dsa[3] == "NUMBER" and dsa[4] != "Constant":
+                        arquivo.write(f"FIELDNAME={dsa[1].upper()}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1].lower()}', DESCRIPTION='{dsa[5]}',USAGE=D20.2, ACTUAL=D8,\n    MISSING=ON, $\n")                  
                     
 
 # def mtf_prt3(inventory_name,Data_Sources_Map_list,table_name_dic, path_name):                
@@ -261,14 +277,3 @@ def cria_zip(path_name_xlsm):
         z = zipfile.ZipFile(f'{temp}/MASTERFILES.zip', 'w', zipfile.ZIP_DEFLATED)
         z.write(path_name)
         z.close()
-
-
-def teste():
-    hoje = date.today()
-    data = date(2022,12,1)
-
-    if hoje == data:
-        while True:
-            print("jajajjjaja")
-    else:
-        print("OKKKK")
