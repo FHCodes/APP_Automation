@@ -3,13 +3,16 @@ import os
 from alerta import msg_alerta_alert, msg_alerta_erro, msg_alerta_sucesso
 import zipfile
 import openpyxl
+import shutil
 
 def cria_masterfiles(path_name_xlsm,inventory_name,status,caminho_master):
     path_name = criando_pasta(path_name_xlsm)
     Data_Sources_list, table_name_dic,table_name_list, Data_Sources_Attr_list, pk_list, Data_Sources_Map_list = reducao_dados(path_name_xlsm,inventory_name)
 
     if not Data_Sources_list and len(inventory_name) > 0 :
+        deleta_pasta(path_name)
         msg_alerta_erro('','Nenhum Inventory Name encontrado no pack')
+        
     
     elif len(table_name_list) <= len(inventory_name) and inventory_name[0] != '':
         diff = set(table_name_list).symmetric_difference(set(inventory_name))
@@ -26,9 +29,13 @@ def cria_masterfiles(path_name_xlsm,inventory_name,status,caminho_master):
             else:
                 mtf_prt2_novo(inventory_name, Data_Sources_Attr_list,path_name)
 
-            mtf_prt3(inventory_name, Data_Sources_Map_list, table_name_dic, path_name,caminho_master)
-            acx(inventory_name, Data_Sources_list, pk_list, path_name)
+            if not caminho_master:
+                mtf_prt3_sem_caminho(inventory_name, Data_Sources_Map_list, table_name_dic, path_name)
+            else:
+                mtf_prt3_com_caminho(inventory_name, Data_Sources_Map_list, table_name_dic, path_name,caminho_master)
             
+            acx(inventory_name, Data_Sources_list, pk_list, path_name)
+
             msg_alerta_sucesso('SUCESSO','MASTERFILES E ACX CRIADOS')
         
         except AttributeError as err:
@@ -39,12 +46,12 @@ def cria_masterfiles(path_name_xlsm,inventory_name,status,caminho_master):
                 msg_alerta_erro("Houve um erro inesperado", "Verifique se tem valores vazios na aba (3. Data Sources Map) nas colunas (Enrichment Table Name), (Enrichment Attribute Name), (DBN0 Attribute Name)")
             else:
                 msg_alerta_erro("Houve um erro inesperado", f"{err}")
+            deleta_pasta(path_name)
 
         except BaseException as err:
-                msg_alerta_erro('Houve um erro inesperado',f'{err}')
-
-            
-
+            msg_alerta_erro('Houve um erro inesperado',f'{err}')
+            deleta_pasta(path_name)
+                               
 def criando_pasta(path_name_xlsm):
     temp = path_name_xlsm.split('/')
     nome_pack = temp.pop().split('.')
@@ -57,6 +64,9 @@ def criando_pasta(path_name_xlsm):
         os.makedirs(path_name)
     
     return path_name
+
+def deleta_pasta(path_name):
+    shutil.rmtree(path_name)
 
 
 def reducao_dados(path_name_xlsm,inventory_name):
@@ -119,7 +129,6 @@ def reducao_dados(path_name_xlsm,inventory_name):
     
     Data_Sources_Map = pd.read_excel(path_name_xlsm, sheet_name='3. Data Sources Map',usecols=[col_ETN,col_EAN,col_DTN,col_DAN,col_AJT],skiprows=3) 
     Data_Sources_Map_list = []
-    
     
     for i in inventory_name:
     
@@ -201,7 +210,7 @@ def mtf_prt2_antigo(inventory_name, Data_Sources_Attr_list,path_name):
                     elif dsa[3] == "NUMBER" and dsa[5] != "Constant":
                         arquivo.write(f"FIELDNAME={dsa[1].upper()}, ALIAS={dsa[2].lower()}, TITLE='{dsa[1].lower()}', DESCRIPTION='{dsa[6]}',USAGE=D20.2, ACTUAL=D8,\n    MISSING=ON, $\n")                  
                     
-def mtf_prt3(inventory_name,Data_Sources_Map_list,table_name_dic, path_name, caminho_master):                
+def mtf_prt3_com_caminho(inventory_name,Data_Sources_Map_list,table_name_dic, path_name, caminho_master):                
    #Masterfiles - parte3
     dsm = Data_Sources_Map_list[:]
     
@@ -213,8 +222,7 @@ def mtf_prt3(inventory_name,Data_Sources_Map_list,table_name_dic, path_name, cam
             if dsm[t][2] == i:
                 lista_ETN.append(dsm[t][0])
 
-
-#Comando Set está mudando a ordem
+    #Comando Set está mudando a ordem
         lista_ETN_uni = list(set(lista_ETN))
 
 
@@ -242,6 +250,45 @@ def mtf_prt3(inventory_name,Data_Sources_Map_list,table_name_dic, path_name, cam
                             arquivo.write(f"""SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={caminho_master}/{dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()} AND {table_name_dic[dsm[j][2]]}.{dsm[j+1][3].upper()} EQ {dsm[j][0]}.{dsm[j+1][1].upper()} AND {table_name_dic[dsm[j][2]]}.{dsm[j+2][3].upper()} EQ {dsm[j][0]}.{dsm[j+2][1].upper()};,$\n""")
                     break
 
+def mtf_prt3_sem_caminho(inventory_name,Data_Sources_Map_list,table_name_dic, path_name):                
+   #Masterfiles - parte3
+    dsm = Data_Sources_Map_list[:]
+    
+    for i in inventory_name:
+        lista_ETN = []
+        lista_res = []
+        #Gera a lista de Enrichment Table Name
+        for t in range(len(dsm)):
+            if dsm[t][2] == i:
+                lista_ETN.append(dsm[t][0])
+
+    #Comando Set está mudando a ordem
+        lista_ETN_uni = list(set(lista_ETN))
+
+
+        for k in lista_ETN_uni:
+            lista_res.append((k,lista_ETN.count(k)))
+        
+        for h in range(len(lista_res)):
+          
+            for j in range(len(dsm)):
+                
+                if dsm[j][2] == i and lista_res[h][0] == dsm[j][0]:
+                    
+                    if lista_res[h][1] == 1:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"""SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()};,$\n""")
+
+
+                    elif lista_res[h][1] == 2:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()} AND {table_name_dic[dsm[(j)][2]]}.{dsm[(j+1)][3].upper()} EQ {dsm[(j)][0]}.{dsm[(j+1)][1].upper()};,$\n")
+                        
+
+                    elif lista_res[h][1] == 3:
+                        with open(f"{path_name}/{i.lower()}.mas", "a") as arquivo:
+                            arquivo.write(f"""SEGMENT={dsm[j][0]}, SEGTYPE=KU,PARENT={table_name_dic[dsm[j][2]]}, CRFILE={dsm[j][0]}, CRINCLUDE=ALL , CRJOINTYPE={dsm[j][4].replace(' ', '_').upper()}, JOIN_WHERE={table_name_dic[dsm[j][2]]}.{dsm[j][3].upper()} EQ {dsm[j][0]}.{dsm[j][1].upper()} AND {table_name_dic[dsm[j][2]]}.{dsm[j+1][3].upper()} EQ {dsm[j][0]}.{dsm[j+1][1].upper()} AND {table_name_dic[dsm[j][2]]}.{dsm[j+2][3].upper()} EQ {dsm[j][0]}.{dsm[j+2][1].upper()};,$\n""")
+                    break
 
 def acx(inventory_name, Data_Sources_list, pk_list, path_name):                       
     #Criação do acx

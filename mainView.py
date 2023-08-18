@@ -65,7 +65,7 @@ def gera_interface():
     ]]
 
   
-    janela = sg.Window("APP AUTOMATION - Versão 3.3", tab_group, icon='icons/esse.ico')
+    janela = sg.Window("APP AUTOMATION - Versão 3.4", tab_group, icon='icons/esse.ico')
    
         
     ziper = False
