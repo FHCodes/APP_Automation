@@ -12,7 +12,7 @@ def gera_interface():
         [sg.InputText(key="path_name",size=(65, 1)),sg.FileBrowse(target='path_name')],
         [sg.Text('Entre com o nome da pasta da masterfile:',size=(40,1),font='Cambria',background_color='Grey')],
         [sg.InputText("", size=(74, 1), key="caminho_master") ],
-        [sg.Text('Entre com os elementos da coluna Inventory Name:',size=(40,1),font='Cambria',background_color='Grey'),sg.Checkbox("Masterfiles antigas",background_color='Grey',font='Cambria',key="Vmf")],
+        [sg.Text('Entre com os elementos da coluna Inventory Name:',size=(40,1),font='Cambria',background_color='Grey'),sg.Checkbox("Masterfiles Oracle",background_color='Grey',font='Cambria',key="Vmf")],
         [sg.Multiline("", size=(72, 10), key="inventory_name") ],
         [sg.Button("Criar"),sg.Button("Zip")]
     ]
@@ -45,7 +45,7 @@ def gera_interface():
         [sg.InputText("", size=(74, 1), key="classe_DBN1") ],
         [sg.Button("Gerar DBN1")]
     ]
-
+    
     tab_group = [
         
         [sg.TabGroup([[
@@ -65,7 +65,7 @@ def gera_interface():
     ]]
 
   
-    janela = sg.Window("APP AUTOMATION - Versão 3.4", tab_group, icon='icons/esse.ico')
+    janela = sg.Window("APP AUTOMATION - Versão 4.0", tab_group, icon='icons/esse.ico')
    
         
     ziper = False
@@ -78,6 +78,10 @@ def gera_interface():
         if evento == "Criar":
             ziper = True
             cria_masterfiles(valores["path_name"], valores["inventory_name"].split('\n'),valores["Vmf"],valores["caminho_master"])
+        
+        if evento == "Organizar":
+            ziper = True
+            mostra_lista(valores["path_name"], valores["dados_app_conf"].split('\n'))
         
         if evento == "Renomear":
             renomeia_arquivos(valores["path_name2"])
