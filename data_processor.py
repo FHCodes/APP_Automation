@@ -9,44 +9,41 @@ class DataProcessor:
         self.path_name = path_name
 
     def process_data(self):
-     
-        # Define informações das planilhas e configurações
-        sheet_info = self._definir_informacoes_sheet_name()
+        try:
+            # Define informações das planilhas e configurações
+            sheet_info = self._definir_informacoes_sheet_name()
 
-        # Carrega os DataFrames das planilhas
-        data_frames = self._carregar_data_frames(sheet_info)
+            # Carrega os DataFrames das planilhas
+            data_frames = self._carregar_data_frames(sheet_info)
 
-        # Valida os cabeçalhos das planilhas
-        self._processar_cabecalhos(data_frames, sheet_info)
+            # Valida os cabeçalhos das planilhas
+            self._processar_cabecalhos(data_frames, sheet_info)
 
-        # Extrai os índices das colunas de interesse
-        column_indices = self._extrair_indices_colunas(data_frames, sheet_info)
+            # Extrai os índices das colunas de interesse
+            column_indices = self._extrair_indices_colunas(data_frames, sheet_info)
+            # Lê os dados das sheet_names com base nos índices das colunas
+            data_sheets = self._processa_leitura_de_dados(sheet_info, column_indices)
+            # Filtra os dados com base no inventory_name
+            filtered_data = self._filtrar_dados(data_sheets, sheet_info)
+            
+            # Processa os dados filtrados e retorna os resultados necessários.
+            data_sources_list, table_name_dic, table_name_list = self._processar_data_sources(filtered_data['data_sources'])
 
-        # Lê os dados das sheet_names com base nos índices das colunas
-        data_sheets = self._processa_leitura_de_dados(sheet_info, column_indices)
+            data_sources_attr_list, pk_list = self._processar_data_sources_attr(filtered_data['data_sources_attr'])
+            data_sources_map_list = self._processar_data_sources_map(filtered_data['data_sources_map'])
+            #---------------------------------------------------------------------------------------------
+            
+            return (
+                data_sources_list, table_name_dic, table_name_list,
+                data_sources_attr_list, pk_list, data_sources_map_list
+            )
 
-        # Filtra os dados com base no inventory_name
-        filtered_data = self._filtrar_dados(data_sheets, sheet_info)
-        
-    
-        # Processa os dados filtrados e retorna os resultados necessários.
-        data_sources_list, table_name_dic, table_name_list = self._processar_data_sources(filtered_data['data_sources'])
-        print(data_sources_list)
-        data_sources_attr_list, pk_list = self._processar_data_sources_attr(filtered_data['data_sources_attr'])
-        data_sources_map_list = self._processar_data_sources_map(filtered_data['data_sources_map'])
-        #---------------------------------------------------------------------------------------------
-        
-        return (
-            data_sources_list, table_name_dic, table_name_list,
-            data_sources_attr_list, pk_list, data_sources_map_list
-        )
-
-        # except Exception as e:
-        #     msg_alerta_erro(
-        #         'Ocorreu um erro ao gerar as masterfiles!',
-        #         'Limpe formatos e filtros da planilha e verifique se o nome das abas estão corretos.'
-        #     )
-        #     raise e
+        except Exception as e:
+            msg_alerta_erro(
+                'Ocorreu um erro ao gerar as masterfiles!',
+                'Limpe formatos e filtros da planilha e verifique se o nome das abas estão corretos.'
+            )
+            raise e
 
     def _definir_informacoes_sheet_name(self):
             """
@@ -315,13 +312,13 @@ class DataProcessor:
         data_sources_list = []
 
         if not self.__verificar_linha_vazia(ds_filtered):
+            print('entrou')
             return
         
-        for _, row in ds_filtered.iterrows():   
+        for _, row in ds_filtered.iterrows():
             table_name_dic[row['col_0']] = row['col_1']
             table_name_list.append(row['col_0'])
             descricao = self._processar_descricao(row['col_3'])
-            
 
             data_sources_list.append(
                 (
@@ -370,13 +367,11 @@ class DataProcessor:
             )
         return data_sources_map_list
 
-
     def __verificar_linha_vazia(self,ds_filtered):
         # Colunas que não podem estar vazias
         columns_to_check = ['col_0', 'col_1', 'col_2']
         
         coluna_vazia = ''  # Para armazenar quais colunas estão vazias
- 
         for index, row in ds_filtered.iterrows():
             # Checar se há valores nulos ou vazios nas colunas especificadas
             for col in columns_to_check:
@@ -389,10 +384,13 @@ class DataProcessor:
                     elif col == 'col_2':
                         coluna_vazia = 'Schema'
 
-                # Se encontrar uma coluna vazia, interrompe o processamento e exibe a mensagem de erro
-                if coluna_vazia:
-                    msg_alerta_erro(
-                        "Erro na aba '3. Data Sources'", 
-                        f"A coluna '{coluna_vazia}' está vazia na linha: {index + 5}."
-                    )
-                    return False
+            # Se encontrar uma coluna vazia, interrompe o processamento e exibe a mensagem de erro
+            print(coluna_vazia)
+            if coluna_vazia:
+                
+                msg_alerta_erro(
+                    "Erro na aba '3. Data Sources'", 
+                    f"A coluna '{coluna_vazia}' está vazia na linha: {index + 5}."
+                )
+                return False
+        return True

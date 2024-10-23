@@ -1,4 +1,4 @@
-from alerta import msg_alerta_erro
+from alerta import msg_alerta_erro, msg_alerta_alert
 
 class MasterfileGenerator:
     def __init__(self, status, path_name, caminho_master):
@@ -111,11 +111,12 @@ class MasterfileGenerator:
                                     # Adiciona a segunda condição
                                     next_dsm_item = dsm[j + 1]
                                     join_where += f" AND {parent_table}.{next_dsm_item[3].upper()} EQ {dsm_item[0]}.{next_dsm_item[1].upper()}"
-                                if res[1] == 3:
+                                elif res[1] == 3:
                                     # Adiciona a terceira condição
                                     next_dsm_item_2 = dsm[j + 2]
                                     join_where += f" AND {parent_table}.{next_dsm_item_2[3].upper()} EQ {dsm_item[0]}.{next_dsm_item_2[1].upper()}"
-
+                                else:
+                                    msg_alerta_alert("ALERT!", "Enrichment Table Name com mais de 3 JOINS")
                                 # Escreve no arquivo .mas
                                 arquivo.write(
                                     f"SEGMENT={dsm_item[0]}, SEGTYPE=KU, PARENT={parent_table}, "
