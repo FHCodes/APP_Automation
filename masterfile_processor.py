@@ -65,7 +65,7 @@ class MasterfileCreator:
             # Gera o ACX
             if not self.generate_acx(inventory_name_extracted, data_sources_list, pk_list):
                 self._update_progress(progress_callback,0)
-                return False   
+                return False
                  
             # Finalização do progresso
             self._update_progress(progress_callback,100)
