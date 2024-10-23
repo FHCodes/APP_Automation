@@ -107,10 +107,12 @@ class TabMasterFiles(QWidget):
 
     def browse_pack(self):
         options = QFileDialog.Options()
+        # Permitindo vários formatos de planilhas, como .xls, .xlsx, .xlsm, .csv, etc.
         file_name, _ = QFileDialog.getOpenFileName(
-            self, "Selecione o pack", "", "Excel Files (*.xls *.xlsx)", options=options)
+            self, "Selecione o pack", "", "Excel Files(*.xls *.xlsx *.xlsm *.csv *.ods)", options=options)
         if file_name:
             self.path_name.setText(file_name)
+
 
     def on_create_button_clicked(self):
         path_name = self.path_name.text()
@@ -131,7 +133,7 @@ class TabMasterFiles(QWidget):
             return
 
         #Verifica se o formato do arquivo eh valido
-        if not path_name.lower().endswith(('.xls', '.xlsx')):
+        if not path_name.lower().endswith(('.xls', '.xlsx', '.xlsm', '.csv')):
             QMessageBox.critical(self, "Arquivo Inválido!", "Insira um formato válido. Ex: xls/xlsx")
             return
 
@@ -140,14 +142,14 @@ class TabMasterFiles(QWidget):
             QMessageBox.critical(self, "Erro!", "Insira ao menos um Inventory Name antes de prosseguir.")
             return
     
-        self.path_name_created = CreateAndDeleteFolder().create_folder(path_name)
+        self.path_name_created = CreateAndDeleteFolder().create_folder(path_name.strip())
         # Desabilitar as abas durante o processamento
         # self.disable_tabs_signal.emit()
         # self.progress_bar.setValue(0)
 
         # Criar o objeto MasterfileCreator
         self.masterfile_creator = MasterfileCreator(
-            path_name, inventory_names, vmf, masterfile_folder, self.path_name_created
+            path_name.strip(), inventory_names, vmf, masterfile_folder, self.path_name_created
         )
 
         # Criar e iniciar o thread
